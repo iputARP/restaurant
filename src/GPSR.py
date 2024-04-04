@@ -10,6 +10,9 @@ import instruction
 import tasklist #Graspとかのやつ enum的に使うつもり
 from gpsr.srv import QRCodeReader,QRCodeReaderResponse # QRCode読み取り用srv
 from gpsr.srv import RecognizeCommands # 命名理解用
+from hsrb_tf_service.srv import target_tf_service
+from hsrb_interface import geometry
+
 robot = hsrb_interface.Robot()
 omni_base = robot.get("omni_base")
 whole_body = robot.get('whole_body')
@@ -107,16 +110,40 @@ class EXEC_GRASP(smach.State):
         smach.State.__init__(self,outcomes=['FinishCommand'])
 
     def execute(self, ud):
-        key = int(input("type some key then finish grasp"))
-        # 物体探索のサービスノード実行
+        # key = int(input("type some key then finish grasp"))
+        # 物体探索のサービスノード実行 rosparamset→把持対象がある場所移動→target見つけたら、static tf化
+        # 移動
+        xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
+        omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
+        #頭下げ
+        whole_body.move_to_joint_positions({'head_tilt_joint': -0.6})
+        rospy.sleep(5)
+        #static tf client 実行
+        rospy.wait_for_service("tidyup_target_server")
+
+        exec = rospy.ServiceProxy("tidyup_target_server", target_tf_service)
+        try:
+            a = exec()
+            rospy.loginfo("{}".format(a))
+        except rospy.ServiceException as exc:
+            rospy.loginfo(str(exc))
 
         # 物体の把持のサービスノード実行
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "static_target")
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.02), "static_target")
 
-        # 把持対象を見る
+        # 把持する
+        gripper.apply_force(0.2)
 
-        # 把持対象のtfをstatic tfにする
+        #持ち上げる
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.5), "static_target")
 
         # 指定先への配達するサービスノード実行(場所or個人)
+        xyw = rospy.set_param(area.Area.task_space[rospy.get_param("bring/destination")])
+        omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
+
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "place_target")
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.02), "place_target")
 
         return "FinishCommand"
 
@@ -139,7 +166,8 @@ if __name__ == "__main__":
     sm.userdata.sm_tasknum = None
     # 命令理解,復唱用に使う
     sm.userdata.commandstring = ""
-    #
+
+
 
     with(sm):
         smach.StateMachine.add('WAIT_DOOR_OPEN',WAIT_DOOR_OPEN(),transitions={"DoorOpen":"MOVE_TO_INSTRUCTIONS"})

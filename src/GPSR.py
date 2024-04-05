@@ -46,48 +46,49 @@ class MOVE_TO_INSTRUCTIONS(smach.State):
         return "MoveToInstructions"
 
 class UNDERSTANDING_COMMAND(smach.State):
-    def __init__(self):
-        smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["cmdstring","tasknum"])
+    pass
+def __init__(self):
+    smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["outputcmd","tasknum"])
 
-    def execute(self, ud):
-        commandstring = ""
-        # int(input("type some key then understanding command"))
-        # 東くん作成QRコードを読むサービスノード実行する
-        # rospy.wait_for_service("qr_reader_server")
-        # exec = rospy.ServiceProxy("qr_reader_server", QRCodeReader)
-        # while True:
-        #     tts.say("今からQRを見る")
-        #     rospy.sleep(1)
-        #     a = exec()
-        #     rospy.loginfo("--------------------------")
-        #     rospy.loginfo(a)
-        #     # userdata.cmdstring
-        #     ud.cmdstring = a.command
-        #     commandstring = a.command
-        #     rospy.loginfo(a.command)
-        #     rospy.loginfo(type(a.command))
-        #     rospy.loginfo("--------------------------")
-        #     if a.success == True:
-        #         break
-        #     elif a.success == False:
-        #         tts.say("読めない")
-        # # 命令を理解するサービスノードを実行する
-        # try:
-        #     tts.say("理解します")
-        #     rospy.wait_for_service("RecognizeCommandServer")
-        #
-        #     exec = rospy.ServiceProxy("RecognizeCommandServer", RecognizeCommands)
-        #     a = exec(commandstring)
-        #     rospy.loginfo(a)
-        #     ud.tasknum = a.task
-        # except rospy.ServiceException as e:
-        #     rospy.loginfo(e)
-        key = int(input("type 0 or 1 0:Grasp 1:Vision"))
-        if key == 0:
-            ud.tasknum = tasklist.TaskList.Grasp
-        elif key == 1:
-            ud.tasknum = tasklist.TaskList.Vision
-        return "UnderstandingCommand"
+def execute(self, ud):
+    commandstring = ""
+    # int(input("type some key then understanding command"))
+    # 東くん作成QRコードを読むサービスノード実行する
+    # rospy.wait_for_service("qr_reader_server")
+    # exec = rospy.ServiceProxy("qr_reader_server", QRCodeReader)
+    # while True:
+    #     tts.say("今からQRを見る")
+    #     rospy.sleep(1)
+    #     a = exec()
+    #     rospy.loginfo("--------------------------")
+    #     rospy.loginfo(a)
+    #     # userdata.cmdstring
+    #     ud.cmdstring = a.command
+    #     commandstring = a.command
+    #     rospy.loginfo(a.command)
+    #     rospy.loginfo(type(a.command))
+    #     rospy.loginfo("--------------------------")
+    #     if a.success == True:
+    #         break
+    #     elif a.success == False:
+    #         tts.say("読めない")
+    # # 命令を理解するサービスノードを実行する
+    # try:
+    #     tts.say("理解します")
+    #     rospy.wait_for_service("RecognizeCommandServer")
+    #
+    #     exec = rospy.ServiceProxy("RecognizeCommandServer", RecognizeCommands)
+    #     a = exec(commandstring)
+    #     rospy.loginfo(a)
+    #     ud.tasknum = a.task
+    # except rospy.ServiceException as e:
+    #     rospy.loginfo(e)
+    key = int(input("type 0 or 1 0:Grasp 1:Vision"))
+    if key == 0:
+        ud.tasknum = tasklist.TaskList.Grasp
+    elif key == 1:
+        ud.tasknum = tasklist.TaskList.Vision
+    return "UnderstandingCommand"
 
 
 class REPEAT_COMMAND(smach.State):
@@ -165,14 +166,15 @@ if __name__ == "__main__":
     # tasklistで条件分岐
     sm.userdata.sm_tasknum = None
     # 命令理解,復唱用に使う
-    sm.userdata.commandstring = ""
+    aaaa=None
+    sm.userdata.sm_commandstring = ""
 
 
 
     with(sm):
         smach.StateMachine.add('WAIT_DOOR_OPEN',WAIT_DOOR_OPEN(),transitions={"DoorOpen":"MOVE_TO_INSTRUCTIONS"})
         smach.StateMachine.add('MOVE_TO_INSTRUCTIONS',MOVE_TO_INSTRUCTIONS(),transitions={"MoveToInstructions":"UNDERSTANDING_COMMAND","GPSREnd":"END"})
-        smach.StateMachine.add('UNDERSTANDING_COMMAND',UNDERSTANDING_COMMAND(),transitions={"UnderstandingCommand":"REPEAT_COMMAND"},remapping={'cmdstring':'commandstring',"tasknum":"sm_tasknum"})
+        smach.StateMachine.add('UNDERSTANDING_COMMAND',UNDERSTANDING_COMMAND(),transitions={"UnderstandingCommand":"REPEAT_COMMAND"},remapping={'outputcmd':'sm_commandstring',"tasknum":"sm_tasknum"})
         smach.StateMachine.add('REPEAT_COMMAND',REPEAT_COMMAND(),transitions={"ExecGrasp":"EXEC_GRASP","ExecVision":"EXEC_VISION"},remapping={"command":"commandstring","tasknum":"sm_tasknum"})
         smach.StateMachine.add('EXEC_GRASP',EXEC_GRASP(),transitions={"FinishCommand":"MOVE_TO_INSTRUCTIONS"})
         smach.StateMachine.add('EXEC_VISION',EXEC_VISION(),transitions={"FinishCommand":"MOVE_TO_INSTRUCTIONS"})

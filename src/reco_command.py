@@ -11,6 +11,7 @@ class RecognitionCommand:
         rospy.Service("RecognizeCommandServer",RecognizeCommands,self.exec)
 
     def exec(self,RecognizeCommandsRequest):
+        rospy.loginfo(RecognizeCommandsRequest.command)
         task = None
         try:
             retV = RecognizeCommandsRequest.command.split(" ")

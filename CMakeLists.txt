@@ -60,6 +60,7 @@ add_service_files(
    FILES
    QRCodeReader.srv
    PoseDetection.srv
+   RecognizeCommands.srv
 #   Service1.srv
 #   Service2.srv
  )

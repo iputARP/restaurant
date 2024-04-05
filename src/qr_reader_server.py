@@ -43,6 +43,7 @@ class QR_Reader(ImageData):
             true = 0
             delay = 5
             start_time = time.time()
+            cmd=""
             while True:
                 ret_qr, decoded_info, points, _ = qcd.detectAndDecodeMulti(self.cv_image_data)
                 if ret_qr:
@@ -52,6 +53,7 @@ class QR_Reader(ImageData):
                                 print(scan)
                                 true = scan
                                 couter += 1
+                                cmd=scan
                             color = (0, 255, 0)
                         else:
                             color = (0, 0, 255)
@@ -60,7 +62,7 @@ class QR_Reader(ImageData):
                     if elapsed_time >= delay:  # タイムアウト時間に達した場合
                         if true:
                             print("Timeout")
-                            return QRCodeReaderResponse(True,scan)
+                            return QRCodeReaderResponse(True,cmd)
                         else:
                             print("QR code not detected.")
                             return QRCodeReaderResponse(False,"よめませんでした")

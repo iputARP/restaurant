@@ -115,14 +115,14 @@ class EXEC_GRASP(smach.State):
         # key = int(input("type some key then finish grasp"))
         # 物体探索のサービスノード実行 rosparamset→把持対象がある場所移動→target見つけたら、static tf化
         # 移動
-        rospy.set_param("hsrb_vision/target_category", rospy.get_param("bring/graspobject"))
+        rospy.set_param("hsrb_visions/target_category", rospy.get_param("bring/graspobject"))
         gripper.command(1.2)
         xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
         rospy.loginfo(xyw)
         omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
         #頭下げ
         whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
-        rospy.sleep(5)
+        rospy.sleep(10)
         #static tf client 実行
         rospy.wait_for_service("tidyup_target_server")
 

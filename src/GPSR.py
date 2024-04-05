@@ -46,8 +46,6 @@ class MOVE_TO_INSTRUCTIONS(smach.State):
         return "MoveToInstructions"
 
 class UNDERSTANDING_COMMAND(smach.State):
-<<<<<<< HEAD
-    pass
 def __init__(self):
     smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["outputcmd","tasknum"])
 
@@ -90,7 +88,7 @@ def execute(self, ud):
     elif key == 1:
         ud.tasknum = tasklist.TaskList.Vision
     return "UnderstandingCommand"
-=======
+
     def __init__(self):
         smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["cmdstring","tasknum"])
 
@@ -133,7 +131,7 @@ def execute(self, ud):
         # elif key == 1:
         #     ud.tasknum = tasklist.TaskList.Vision
         return "UnderstandingCommand"
->>>>>>> old
+
 
 
 class REPEAT_COMMAND(smach.State):

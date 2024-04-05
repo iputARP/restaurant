@@ -13,6 +13,7 @@ class RecognitionCommand:
     def exec(self,RecognizeCommandsRequest):
         rospy.loginfo(RecognizeCommandsRequest.command)
         task = None
+        task_order = None
         try:
             retV = RecognizeCommandsRequest.command.split(" ")
             rospy.loginfo(retV)
@@ -23,24 +24,29 @@ class RecognitionCommand:
                     rospy.set_param("bring/graspobject", retV[6])
                     rospy.set_param("bring/gotolocation", retV[9])
                     rospy.set_param("bring/destination", retV[15])
+                    task_order = 0
                 else:
                     rospy.set_param("bring/gotoroom", retV[3])
                     rospy.set_param("bring/graspobject", retV[6])
                     rospy.set_param("bring/gotolocation", retV[9])
                     rospy.set_param("bring/destination", retV[14])
+                    task_order = 1
             elif retV[0] == "Tell":
                 task = 1
                 if retV[4] != "people":
                     rospy.set_param("vision/countcategory", retV[4])
                     rospy.set_param("vision/placepose", retV[9])
+                    task_order = 0
                 else:
                     rospy.set_param("vision/countcategory", retV[7])
                     rospy.set_param("vision/placepose", retV[9])
-            return RecognizeCommandsResponse(True, task)
+                    task_order = 1
+            return RecognizeCommandsResponse(True, task,task_order)
         except Exception as e:
             rospy.loginfo(e)
-            task=-1
-            return RecognizeCommandsResponse(False,task)
+            task = -1
+            task_order = -1
+            return RecognizeCommandsResponse(False,task,task_order)
 
 if __name__=="__main__":
     RecognitionCommand()

@@ -46,6 +46,7 @@ class MOVE_TO_INSTRUCTIONS(smach.State):
         return "MoveToInstructions"
 
 class UNDERSTANDING_COMMAND(smach.State):
+<<<<<<< HEAD
     pass
 def __init__(self):
     smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["outputcmd","tasknum"])
@@ -89,6 +90,50 @@ def execute(self, ud):
     elif key == 1:
         ud.tasknum = tasklist.TaskList.Vision
     return "UnderstandingCommand"
+=======
+    def __init__(self):
+        smach.State.__init__(self,outcomes=['UnderstandingCommand'],output_keys=["cmdstring","tasknum"])
+
+    def execute(self, ud):
+        commandstring = ""
+        # int(input("type some key then understanding command"))
+        # 東くん作成QRコードを読むサービスノード実行する
+        rospy.wait_for_service("qr_reader_server")
+        exec = rospy.ServiceProxy("qr_reader_server", QRCodeReader)
+        while True:
+            tts.say("今からQRを見る")
+            rospy.sleep(1)
+            a = exec()
+            rospy.loginfo("--------------------------")
+            rospy.loginfo(a)
+            # userdata.cmdstring
+            ud.cmdstring = a.command
+            commandstring = a.command
+            rospy.loginfo(a.command)
+            rospy.loginfo(type(a.command))
+            rospy.loginfo("--------------------------")
+            if a.success == True:
+                break
+            elif a.success == False:
+                tts.say("読めない")
+        # 命令を理解するサービスノードを実行する
+        try:
+            tts.say("理解します")
+            rospy.wait_for_service("RecognizeCommandServer")
+
+            exec = rospy.ServiceProxy("RecognizeCommandServer", RecognizeCommands)
+            a = exec(commandstring)
+            rospy.loginfo(a)
+            ud.tasknum = a.task
+        except rospy.ServiceException as e:
+            rospy.loginfo(e)
+        # key = int(input("type 0 or 1 0:Grasp 1:Vision"))
+        # if key == 0:
+        #     ud.tasknum = tasklist.TaskList.Grasp
+        # elif key == 1:
+        #     ud.tasknum = tasklist.TaskList.Vision
+        return "UnderstandingCommand"
+>>>>>>> old
 
 
 class REPEAT_COMMAND(smach.State):
@@ -97,7 +142,7 @@ class REPEAT_COMMAND(smach.State):
 
     def execute(self, ud):
         # 復唱する
-        # tts.say(ud.command)
+        tts.say(ud.command)
         if ud.tasknum == tasklist.TaskList.Grasp:
             rospy.loginfo("task Grasp execute")
             return "ExecGrasp"
@@ -114,10 +159,13 @@ class EXEC_GRASP(smach.State):
         # key = int(input("type some key then finish grasp"))
         # 物体探索のサービスノード実行 rosparamset→把持対象がある場所移動→target見つけたら、static tf化
         # 移動
+        rospy.set_param("hsrb_vision/target_category", rospy.get_param("bring/graspobject"))
+        gripper.command(1.2)
         xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
+        rospy.loginfo(xyw)
         omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
         #頭下げ
-        whole_body.move_to_joint_positions({'head_tilt_joint': -0.6})
+        whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
         rospy.sleep(5)
         #static tf client 実行
         rospy.wait_for_service("tidyup_target_server")
@@ -140,11 +188,13 @@ class EXEC_GRASP(smach.State):
         whole_body.move_end_effector_pose(geometry.pose(z=-0.5), "static_target")
 
         # 指定先への配達するサービスノード実行(場所or個人)
-        xyw = rospy.set_param(area.Area.task_space[rospy.get_param("bring/destination")])
+        xyw = area.Area.task_space[rospy.get_param("bring/destination")]
         omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
 
         whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "place_target")
         whole_body.move_end_effector_pose(geometry.pose(z=-0.02), "place_target")
+
+        gripper.command(1.2)
 
         return "FinishCommand"
 

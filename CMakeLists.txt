@@ -61,6 +61,7 @@ add_service_files(
    QRCodeReader.srv
    PoseDetection.srv
    RecognizeCommands.srv
+   ObjectCount.srv
 #   Service1.srv
 #   Service2.srv
  )

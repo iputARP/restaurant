@@ -10,6 +10,7 @@ import instruction
 import tasklist #Graspとかのやつ enum的に使うつもり
 from gpsr.srv import QRCodeReader,QRCodeReaderResponse # QRCode読み取り用srv
 from gpsr.srv import RecognizeCommands # 命名理解用
+from gpsr.srv import ObjectCount
 from hsrb_tf_service.srv import target_tf_service
 from hsrb_interface import geometry
 
@@ -56,6 +57,7 @@ class UNDERSTANDING_COMMAND(smach.State):
         rospy.wait_for_service("qr_reader_server")
         exec = rospy.ServiceProxy("qr_reader_server", QRCodeReader)
         while True:
+            whole_body.move_to_joint_positions({'head_tilt_joint': 0.0})
             tts.say("今からQRを見る")
             rospy.sleep(1)
             a = exec()
@@ -115,14 +117,14 @@ class EXEC_GRASP(smach.State):
         # key = int(input("type some key then finish grasp"))
         # 物体探索のサービスノード実行 rosparamset→把持対象がある場所移動→target見つけたら、static tf化
         # 移動
-        rospy.set_param("hsrb_visions/target_category", rospy.get_param("bring/graspobject"))
+        rospy.set_param("hsrb_vision/target_category", rospy.get_param("bring/graspobject"))
         gripper.command(1.2)
         xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
         rospy.loginfo(xyw)
         omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
         #頭下げ
         whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
-        rospy.sleep(10)
+        rospy.sleep(5)
         #static tf client 実行
         rospy.wait_for_service("tidyup_target_server")
 
@@ -159,8 +161,58 @@ class EXEC_VISION(smach.State):
         smach.State.__init__(self,outcomes=['FinishCommand'],input_keys=["task_order"])
 
     def execute(self, ud):
-        key = int(input("type some key then finish visions"))
+        # visonタスクの中の find obj / find people のどちらを実行するかkeyで判断
+        # key = int(input("type 0 or 1 key then finish repeat exec count command 0:object,1:people"))
+        key = ud.task_order
 
+        # 物体認識0、人認識1
+        if key == 0:
+
+            # カウントする物体カテゴリー名と場所名を取得
+            obj_category = rospy.get_param("vision/countcategory")
+            place = rospy.get_param("vision/placepose")
+
+            # 場所へ行く
+            xyw = area.Area.task_space[place]
+            rospy.loginfo(xyw)
+            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+
+            # 頭下げ
+            whole_body.move_to_go()
+            whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
+
+            # 検出した物体をカテゴリ指定してカウントする
+            rospy.sleep(5)
+            rospy.wait_for_service("object_counter_server")
+            exec = rospy.ServiceProxy("object_counter_server", ObjectCount)
+
+            obj_num = -1
+            try:
+                obj_num = exec(obj_category)
+            except rospy.ServiceException as exc:
+                rospy.loginfo(str(exc))
+
+            rospy.loginfo(f"obj_num:{obj_num}")
+            tts.say(f"{place}にある{obj_category}は{obj_num}個です")
+            return "FinishCommand"
+
+
+        else:
+            rospy.loginfo(f"count people")
+            room = rospy.get_param("vision/countcategory")
+            pose = rospy.get_param("vision/placepose")
+            xyw = area.Area.task_space[room]
+            rospy.loginfo(xyw)
+            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+
+            # 部屋の入口へ行く
+            # 停止位置の数を繰り返す
+            # 停止位置へ行く
+            # 部屋の内側を向く
+            # ポーズ認識してマーカーを置く
+            # マーカーの数を合計する
+
+        
         return "FinishCommand"
 
 

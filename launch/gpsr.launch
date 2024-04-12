@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="hsrb_visions" name="object_detection_node" type="object_detection" launch-prefix="gnome-terminal --"/>
+  <node pkg="gpsr" name="gpsr_node" type="GPSR.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="gpsr" name="qr_reader_server_node" type="qr_reader_server.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="gpsr" name="qr_reco_command_node" type="reco_command.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="gpsr" name="object_counter_server_node" type="object_counter_server.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="hsrb_tf_service" name="tidyup_tf_server_node" type="tidyup_tf_server.py" launch-prefix="gnome-terminal --"/>
+</launch>

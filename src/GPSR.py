@@ -10,6 +10,7 @@ import instruction
 import tasklist #Graspとかのやつ enum的に使うつもり
 from gpsr.srv import QRCodeReader,QRCodeReaderResponse # QRCode読み取り用srv
 from gpsr.srv import RecognizeCommands # 命名理解用
+from gpsr.srv import ObjectCount
 from hsrb_tf_service.srv import target_tf_service
 from hsrb_interface import geometry
 
@@ -56,6 +57,7 @@ class UNDERSTANDING_COMMAND(smach.State):
         rospy.wait_for_service("qr_reader_server")
         exec = rospy.ServiceProxy("qr_reader_server", QRCodeReader)
         while True:
+            whole_body.move_to_joint_positions({'head_tilt_joint': 0.0})
             tts.say("今からQRを見る")
             rospy.sleep(1)
             a = exec()
@@ -78,6 +80,7 @@ class UNDERSTANDING_COMMAND(smach.State):
 
             exec = rospy.ServiceProxy("RecognizeCommandServer", RecognizeCommands)
             a = exec(commandstring)
+            # a = exec("Go to the roomA, grasp the tennis_ball on the tidy_area and place it on the food area.")
             rospy.loginfo(a)
             ud.tasknum = a.task
             ud.task_order = a.order_task
@@ -97,6 +100,7 @@ class REPEAT_COMMAND(smach.State):
         smach.State.__init__(self,outcomes=['ExecGrasp','ExecVision'],input_keys=["command","tasknum"])
 
     def execute(self, ud):
+        rospy.loginfo(ud.command)
         # 復唱する
         tts.say(ud.command)
         if ud.tasknum == tasklist.TaskList.Grasp:
@@ -110,28 +114,42 @@ class REPEAT_COMMAND(smach.State):
 class EXEC_GRASP(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=['FinishCommand'],input_keys=["task_order"])
+        self.x_width = 0
 
     def execute(self, ud):
         # key = int(input("type some key then finish grasp"))
         # 物体探索のサービスノード実行 rosparamset→把持対象がある場所移動→target見つけたら、static tf化
+        # 見る時邪魔なので、アームどかす
+        whole_body.move_to_joint_positions({'arm_roll_joint': 0.5})
         # 移動
-        rospy.set_param("hsrb_visions/target_category", rospy.get_param("bring/graspobject"))
+        rospy.set_param("hsrb_vision/target_category", rospy.get_param("bring/graspobject"))
         gripper.command(1.2)
         xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
         rospy.loginfo(xyw)
         omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
         #頭下げ
         whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
-        rospy.sleep(10)
+        rospy.sleep(5)
         #static tf client 実行
         rospy.wait_for_service("tidyup_target_server")
 
         exec = rospy.ServiceProxy("tidyup_target_server", target_tf_service)
-        try:
-            a = exec()
-            rospy.loginfo("{}".format(a))
-        except rospy.ServiceException as exc:
-            rospy.loginfo(str(exc))
+        while True:
+            try:
+                a = exec()
+                rospy.loginfo("{}".format(a))
+                if a.flag == True:
+                    break
+                else:
+                    tts.say("視点をずらします")
+                    # 視点をずらす操作を入れる
+                    # tidy up go_abs 1.69,1.13,math.pi/2 幅はxに1.5 変える幅は0.3ずつ
+                    whole_body.gaze_point(point=geometry.Vector3(x=1.69+self.x_width, y=1.8, z=0), ref_frame_id='map')
+                    self.x_width=self.x_width+0.3
+                    rospy.sleep(10)
+                    pass
+            except rospy.ServiceException as exc:
+                rospy.loginfo(str(exc))
 
         # 物体の把持のサービスノード実行
         whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "static_target")
@@ -159,8 +177,58 @@ class EXEC_VISION(smach.State):
         smach.State.__init__(self,outcomes=['FinishCommand'],input_keys=["task_order"])
 
     def execute(self, ud):
-        key = int(input("type some key then finish visions"))
+        # visonタスクの中の find obj / find people のどちらを実行するかkeyで判断
+        # key = int(input("type 0 or 1 key then finish repeat exec count command 0:object,1:people"))
+        key = ud.task_order
 
+        # 物体認識0、人認識1
+        if key == 0:
+
+            # カウントする物体カテゴリー名と場所名を取得
+            obj_category = rospy.get_param("vision/countcategory")
+            place = rospy.get_param("vision/placepose")
+
+            # 場所へ行く
+            xyw = area.Area.task_space[place]
+            rospy.loginfo(xyw)
+            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+
+            # 頭下げ
+            whole_body.move_to_go()
+            whole_body.move_to_joint_positions({'head_tilt_joint': -0.8})
+
+            # 検出した物体をカテゴリ指定してカウントする
+            rospy.sleep(5)
+            rospy.wait_for_service("object_counter_server")
+            exec = rospy.ServiceProxy("object_counter_server", ObjectCount)
+
+            obj_num = -1
+            try:
+                obj_num = exec(obj_category)
+            except rospy.ServiceException as exc:
+                rospy.loginfo(str(exc))
+
+            rospy.loginfo(f"obj_num:{obj_num}")
+            tts.say(f"{place}にある{obj_category}は{obj_num}個です")
+            return "FinishCommand"
+
+
+        else:
+            rospy.loginfo(f"count people")
+            room = rospy.get_param("vision/countcategory")
+            pose = rospy.get_param("vision/placepose")
+            xyw = area.Area.task_space[room]
+            rospy.loginfo(xyw)
+            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+
+            # 部屋の入口へ行く
+            # 停止位置の数を繰り返す
+            # 停止位置へ行く
+            # 部屋の内側を向く
+            # ポーズ認識してマーカーを置く
+            # マーカーの数を合計する
+
+        
         return "FinishCommand"
 
 
@@ -175,13 +243,11 @@ if __name__ == "__main__":
     aaaa=None
     sm.userdata.sm_commandstring = ""
     sm.userdata.sm_task_order = None
-
-
-
+    
     with(sm):
         smach.StateMachine.add('WAIT_DOOR_OPEN',WAIT_DOOR_OPEN(),transitions={"DoorOpen":"MOVE_TO_INSTRUCTIONS"})
         smach.StateMachine.add('MOVE_TO_INSTRUCTIONS',MOVE_TO_INSTRUCTIONS(),transitions={"MoveToInstructions":"UNDERSTANDING_COMMAND","GPSREnd":"END"})
-        smach.StateMachine.add('UNDERSTANDING_COMMAND',UNDERSTANDING_COMMAND(),transitions={"UnderstandingCommand":"REPEAT_COMMAND"},remapping={'outputcmd':'sm_commandstring',"tasknum":"sm_tasknum","task_order":"sm_task_order"})
+        smach.StateMachine.add('UNDERSTANDING_COMMAND',UNDERSTANDING_COMMAND(),transitions={"UnderstandingCommand":"REPEAT_COMMAND"},remapping={'cmdstring':'sm_commandstring',"tasknum":"sm_tasknum","task_order":"sm_task_order"})
         smach.StateMachine.add('REPEAT_COMMAND',REPEAT_COMMAND(),transitions={"ExecGrasp":"EXEC_GRASP","ExecVision":"EXEC_VISION"},remapping={"command":"sm_commandstring","tasknum":"sm_tasknum"})
         smach.StateMachine.add('EXEC_GRASP',EXEC_GRASP(),transitions={"FinishCommand":"MOVE_TO_INSTRUCTIONS"},remapping={"task_order":"sm_task_order"})
         smach.StateMachine.add('EXEC_VISION',EXEC_VISION(),transitions={"FinishCommand":"MOVE_TO_INSTRUCTIONS"},remapping={"task_order":"sm_task_order"})

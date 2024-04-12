@@ -43,7 +43,6 @@ class QR_Reader(ImageData):
             true = 0
             delay = 5
             start_time = time.time()
-            cmd= 0
             cmd=""
             while True:
                 ret_qr, decoded_info, points, _ = qcd.detectAndDecodeMulti(self.cv_image_data)
@@ -55,7 +54,6 @@ class QR_Reader(ImageData):
                                 true = scan
                                 couter += 1
                                 cmd = scan
-                                cmd=scan
                             color = (0, 255, 0)
                         else:
                             color = (0, 0, 255)

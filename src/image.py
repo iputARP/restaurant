@@ -6,7 +6,8 @@ from gpsr.srv import QRCodeReader,QRCodeReaderRequest
 class ImageData:
     def __init__(self):
         # rospy.Subscriber("/hsrb/head_center_camera/image_raw",Image,self.callback)
-        rospy.Subscriber("/hsrb/head_l_stereo_camera/image_raw",Image,self.callback)
+        # rospy.Subscriber("/hsrb/head_l_stereo_camera/image_raw",Image,self.callback)
+        rospy.Subscriber("/hsrb/head_rgbd_sensor/rgb/image_raw",Image,self.callback)
 
 
     def callback(self,msg):

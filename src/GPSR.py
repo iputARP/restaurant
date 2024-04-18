@@ -222,6 +222,7 @@ class EXEC_VISION(smach.State):
         rospy.set_param("hsrb_visions/target_category","all")
         # visonタスクの中の find obj / find people のどちらを実行するかkeyで判断
         # key = int(input("type 0 or 1 key then finish repeat exec count command 0:object,1:people"))
+        rospy.set_param("/hsrb_vision/target_category", "all")
         key = ud.task_order
 
         # 物体認識0、人認識1

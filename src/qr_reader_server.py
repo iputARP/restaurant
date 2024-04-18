@@ -22,7 +22,7 @@ class QR_Reader(ImageData):
 
     def callback(self,msg):
         self.image_data=msg
-        self.cv_image_data = self.bridge.imgmsg_to_cv2(self.image_data)
+        self.cv_image_data = self.bridge.imgmsg_to_cv2(self.image_data,"bgr8")
 
     # 仕様:
     # 5秒間実行。５秒立っても認識できない場合、falseを返すようにする。

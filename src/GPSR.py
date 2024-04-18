@@ -13,7 +13,7 @@ import instruction
 import tasklist #Graspとかのやつ enum的に使うつもり
 from gpsr.srv import QRCodeReader,QRCodeReaderResponse # QRCode読み取り用srv
 from gpsr.srv import RecognizeCommands # 命名理解用
-from hsrb_tf_service.srv import target_tf_service
+from hsrb_tf_service.srv import target_tf_service,gpsr_place,gpsr_placeRequest
 from hsrb_interface import geometry
 from gpsr.srv import ObjectCount
 
@@ -113,7 +113,7 @@ class EXEC_GRASP_MOVE_AREA(smach.State):
         rospy.set_param("hsrb_visions/target_category", rospy.get_param("bring/graspobject"))
         gripper.command(1.2)
         xyw = area.Area.task_space[rospy.get_param("bring/gotolocation")]
-        omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
+        omni_base.go_abs(xyw[0],xyw[1],xyw[2],60)
 
         return "ExecGraspSearchObj"
 
@@ -122,12 +122,15 @@ class EXEC_GRASP_SEARCH_OBJ(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=["ExecGraspApproach"])
         self.x_width = 0
+        self.y_width = 0
         # service関連
         rospy.wait_for_service("tidyup_target_server")
         self.target_server_exec = rospy.ServiceProxy("tidyup_target_server", target_tf_service)
 
 
     def execute(self, ud):
+        self.x_width = 0
+        self.y_width = 0
         # 見る時アーム邪魔なのでどかす
         whole_body.move_to_joint_positions({'arm_roll_joint': 0.5})
         #頭下げ
@@ -141,11 +144,27 @@ class EXEC_GRASP_SEARCH_OBJ(smach.State):
                     break
                 else:
                     tts.say("視点をずらします")
-                    # 視点をずらす操作を入れる
-                    # tidy up go_abs 1.69,1.13,math.pi/2 幅はxに1.5 変える幅は0.3ずつ
-                    whole_body.gaze_point(point=geometry.Vector3(x=1.69+self.x_width, y=1.8, z=0), ref_frame_id='map')
-                    self.x_width=self.x_width+0.3
-                    rospy.sleep(10)
+                    if rospy.get_param("bring/gotolocation") == "tidy_area":
+                        # 視点をずらす操作を入れる
+                        # tidy up go_abs 1.69,1.13,math.pi/2 幅はxに1.5 変える幅は0.3ずつ
+                        whole_body.gaze_point(point=geometry.Vector3(x=1.69+self.x_width, y=1.8, z=0), ref_frame_id='map')
+                        self.x_width=self.x_width+0.3
+                    elif rospy.get_param("bring/gotolocation") == "food":
+                        whole_body.gaze_point(point=geometry.Vector3(x=0.7+self.x_width, y=0+self.y_width, z=0),ref_frame_id = "map")
+                        if self.y_width != 0.6:
+                            self.y_width = self.y_width + 0.3
+                        else:
+                            self.y_width = 0
+                            self.x_width = 0.4
+                    elif rospy.get_param("bring/gotolocation") == "shelf_area":
+                        whole_body.gaze_point(point=geometry.Vector3(x=6, y=0, z=0),
+                                              ref_frame_id="map")
+                        pass
+                    elif rospy.get_param("bring/gotolocation") == "human_area":
+                        # ミスった時用でなにか入れとく
+                        pass
+
+                    rospy.sleep(5)
                     pass
             except rospy.ServiceException as exc:
                 rospy.loginfo(str(exc))
@@ -162,7 +181,7 @@ class EXEC_GRASP_APPROACH(smach.State):
             whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "static_target")
         except Exception as e:
             rospy.loginfo(e)
-            return "NoeFoundStatic"
+            return "NotFoundStatic"
         return "ExecGrasp"
 
 
@@ -170,17 +189,26 @@ class EXEC_GRASP(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=["Exec_Place_Obj","FailedGrasp"])
 
+
+
     def execute(self, ud):
         try:
-            # 物体の把
+            # 物体の把持
             whole_body.move_end_effector_pose(geometry.pose(z=-0.02), "static_target")
 
             # 把持
-            gripper.apply_force(0.2)
+            gripper.apply_force(1)
+
+            # もう一度把持動作する。つかめていないのに、ハンドが開いていることがあるため
+            whole_body.move_end_effector_pose(geometry.pose(z=-0.1), "static_target")
+            gripper.apply_force(1)
+
+            # 把持チェック
+            if gripper.get_distance() < 0.02:
+                return "FailedGrasp"
 
             # 持ち上げる
             whole_body.move_end_effector_pose(geometry.pose(z=-0.5), "static_target")
-
         except Exception as e:
             rospy.loginfo(e)
             return "FailedGrasp"
@@ -190,14 +218,28 @@ class EXEC_GRASP(smach.State):
 class EXEC_GRASP_PLACE_OBJ(smach.State):
     def __init__(self):
         smach.State.__init__(self,outcomes=["MoveToInstructions"])
-
+        # gspr用place target
+        rospy.wait_for_service("gprs_target_server")
+        self.exec = rospy.ServiceProxy("gprs_target_server",gpsr_place)
+        self.req = gpsr_placeRequest()
     def execute(self, ud):
         # key = int(input("type any key then MoveToInstructions"))
         xyw = area.Area.task_space[rospy.get_param("bring/destination")]
-        omni_base.go_abs(xyw[0],xyw[1],xyw[2],30)
+        # self.req.yaw = xyw[2]
+        self.req.area_info = rospy.get_param("bring/destination")
+        # 置き場所を設定
+        try:
+            a = self.exec(self.req)
+            rospy.loginfo(a)
+        except Exception as e:
+            rospy.loginfo(e)
 
-        whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "place_target")
-        whole_body.move_end_effector_pose(geometry.pose(z=-0.02), "place_target")
+        omni_base.go_abs(xyw[0],xyw[1],xyw[2],60)
+
+        whole_body.move_to_neutral()
+
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.2), "gpsr_place_target")
+        whole_body.move_end_effector_pose(geometry.pose(z=-0.05), "gpsr_place_target")
 
         gripper.command(1.2)
         return "MoveToInstructions"
@@ -208,6 +250,10 @@ class EXEC_FAILED_GRASP(smach.State):
         smach.State.__init__(self,outcomes=["ExecGraspSearchObj"])
 
     def execute(self, ud):
+        xyz = area.Area.task_space[rospy.get_param("bring/gotolocation")]
+        whole_body.move_to_neutral()
+        gripper.command(1.2)
+        omni_base.go_abs(xyz[0],xyz[1],xyz[2],60)
         # static tfの座標値見る。
         # みた座標値から少し下がるx or y
         # 腕をどかす
@@ -235,7 +281,7 @@ class EXEC_VISION(smach.State):
             xyw = area.Area.task_space[place]
             rospy.loginfo(xyw)
             try:
-                omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+                omni_base.go_abs(xyw[0], xyw[1], xyw[2], 60)
             except Exception as e:
                 rospy.loginfo(e)
                 return "FailedMove"
@@ -267,7 +313,7 @@ class EXEC_VISION(smach.State):
             pose = rospy.get_param("vision/placepose")
             xyw = area.Area.task_space[room]
             rospy.loginfo(xyw)
-            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 30)
+            omni_base.go_abs(xyw[0], xyw[1], xyw[2], 60)
 
 
         return "FinishCommand"
@@ -280,7 +326,7 @@ class EXEC_VISION_FAILED_MOVE(smach.State):
         # ちょっと動く
         place = rospy.get_param("vision/placepose")
         xyw = area.Area.task_space[place]
-        omni_base.go_abs(xyw[0]-0.1,xyw[1]-0.1,xyw[2],30)
+        omni_base.go_abs(xyw[0]-0.1,xyw[1]-0.1,xyw[2],60)
         return "ExecVision"
 
 

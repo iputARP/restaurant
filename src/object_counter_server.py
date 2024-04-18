@@ -58,6 +58,7 @@ class ObjectCounter:
 
 
     def exec(self,req):
+
         self.all_items_count = {item: 0 for item in self.all_items}
         self.all_items_count["others"] = 0
         self.callback_counter = 0

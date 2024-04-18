@@ -18,7 +18,7 @@ class Person_Pose_Detection(ImageData):
         rospy.Service("person_pose_detection_server",PoseDetection,self.exec)
 
     def callback(self,msg):
-        self.image_data = msg
+        self.image_data = self.bridge.imgmsg_to_cv2(self.image_data,"bgr8")
 
 
     # 仕様

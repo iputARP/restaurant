@@ -16,7 +16,6 @@ from gpsr.srv import RecognizeCommands # 命名理解用
 from hsrb_tf_service.srv import target_tf_service,gpsr_place,gpsr_placeRequest
 from hsrb_interface import geometry
 from gpsr.srv import ObjectCount
-from human_pose_counter
 
 robot = hsrb_interface.Robot()
 omni_base = robot.get("omni_base")

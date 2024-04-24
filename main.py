@@ -13,7 +13,7 @@ if __name__ == '__main__':
     #rospy.init_node('state_machine')
     sm_order = smach.StateMachine(outcomes=['success'])
     with sm_order:
-        smach.StateMachine.add('INIT', Init(), transitions={'succeeded': 'VISION_CLIENT', 'failed': 'INIT'})
+        smach.StateMachine.add('INIT', st.Init(), transitions={'succeeded': 'VISION_CLIENT', 'failed': 'INIT'})
         smach.StateMachine.add('VISION_CLIENT', st.Vision_client(),
                                transitions={'succeeded': 'RECOGNITION', 'failed': 'VISION_CLIENT'})
         smach.StateMachine.add('RECOGNITION', st.Recognition(),

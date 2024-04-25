@@ -15,46 +15,26 @@ class RecognitionCommand:
         task = None
         task_order = None
         try:
-            retV = RecognizeCommandsRequest.command.split(" ")
+            retV = RecognizeCommandsRequest.command
             rospy.loginfo(retV)
-            if retV[0] == "Go":
+            if retV == "NO1":
                 task = 0
-                if retV[11]=="place":
-                    rospy.set_param("bring/gotoroom", retV[3])
-                    rospy.set_param("bring/graspobject", retV[6])
-                    rospy.set_param("bring/gotolocation", retV[9])
-                    # .消してる
-                    retV[15] = retV[15].strip(".")
-                    rospy.set_param("bring/destination", retV[15])
-                    task_order = 0
-                else:
-                    rospy.set_param("bring/gotoroom", retV[3])
-                    rospy.set_param("bring/graspobject", retV[6])
-                    rospy.set_param("bring/gotolocation", retV[9])
-                    # .消してる
-                    retV[14] = retV[14].strip(".")
-                    rospy.set_param("bring/destination", retV[14])
-                    task_order = 1
-            elif retV[0] == "Tell":
+                rospy.set_param("menu/object1", "Apple")  # 当日メニューの名前をここに入れる？
+                rospy.set_param("menu/object2", "Orange")
+                rospy.set_param("menu/number1","2")
+                rospy.set_param("menu/number2","1")
+                task_order = 0
+            elif retV == "NO2":
                 task = 1
-                if retV[4] != "people":
-                    rospy.set_param("vision/countcategory", retV[4])
-                    # .消してる
-                    retV[9] = retV[9].strip(".")
-                    rospy.set_param("vision/placepose", retV[9])
-                    task_order = 0
-                else:
-                    rospy.set_param("vision/countcategory", retV[7])
-                    # .消してる
-                    retV[9] = retV[9].strip(".")
-                    rospy.set_param("vision/placepose", retV[9])
-                    task_order = 1
-            return RecognizeCommandsResponse(True, task,task_order)
+                rospy.set_param("menu/object1", "Pringles")
+                rospy.set_param("menu/number1","1")
+                task_order = 1
+            return RecognizeCommandsResponse(True, task, task_order)
         except Exception as e:
             rospy.loginfo(e)
             task = -1
             task_order = -1
-            return RecognizeCommandsResponse(False,task,task_order)
+            return RecognizeCommandsResponse(False, task, task_order)
 
 if __name__=="__main__":
     RecognitionCommand()

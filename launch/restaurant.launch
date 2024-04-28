@@ -1,0 +1,8 @@
+<launch>
+  <node pkg="hsrb_visions" name="human_detection_node" type="human_detection" launch-prefix="gnome-terminal --"/>
+  <node pkg="restaurant" name="restaurant_node" type="restaurant.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="restaurant" name="qr_reader_server_node" type="qr_reader_server.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="restaurant" name="qr_reco_command_node" type="reco_command.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="restaurant" name="object_counter_server_node" type="object_counter_server.py" launch-prefix="gnome-terminal --"/>
+  <node pkg="tf_service" name="target_tf_server_node" type="target_tf_server.py" launch-prefix="gnome-terminal --"/>
+</launch>

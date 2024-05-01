@@ -46,6 +46,18 @@ from geometry_msgs.msg import TransformStamped
 from numpy import source
 
 
+#ステートモジュールの呼び出し。呼びさし先で、実際の処理を記述
+from state_moduel.init_state import Init                      #初期化クラス
+from state_moduel.vision_client_state import Vision_client    #人認識クラス
+from state_moduel.recognition_state import Recognition        #QR読み取りクラス
+from state_moduel.go_to_client_state import Go_to_client      #クライアントへの移動クラス
+from state_moduel.voice_order_state import Voice_order        #
+from state_moduel.judge_order_state import Judge_order
+from state_moduel.go_to_kitchen_state import Go_to_kitchen
+from state_moduel.tell_order_state import Tell_order
+from state_moduel.go_to_client_state import Go_to_client
+from state_moduel.back_to_kitchen_state import Back_to_kitchen
+
 #VOSKのモデルパス ここはしょうへいから聞く
 #MODEL_PATH =
 

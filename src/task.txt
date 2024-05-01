@@ -1,0 +1,23 @@
+#3/29(金)　次週までにオーダーの音声認識の完成　Onlineマッピングの深堀、あわよくば完成、音声発話は完成してるらしいからそれも聞く。オンラインマッピングのナビゲーションの完成。全体のフローを完成する。それから担当振りする。ロボットとバーマンと注文する人のフロー分けして、それが噛み合うように。カスタムコンテナをどうするか。てさげかばんで本当にできるのか。
+#音声認識が難しいからQRコードに変えたらしい。
+#オーダーの部分の話（青い服の人にお願いしますとかいう糞意地悪なオーダーがある？）
+#マップがある前提で且つ手フリ位置も決め打ち、QRコードでオーダを取るとする。
+#現状、rosrun object detectionを走らせつつ、target_tfのノードも走らせつつ、プログラムを走らせている
+#スマッチでcontinueで繰り返して目的地へ移動するようにする。（多分hecter_slamを別のターミナルで実行しながら各ステートで目的地に移動しなければならないときに目的地と自己位置を比べて移動させる（５０ｃｍぐらいしか移動しないから））
+#ちなみに上の中村先生のやつはexceptに入ってもう一回動かしてやって目的地に行ったらsuccessになるらしい
+#仮キッチン（3.0,-0.16,-1.58）tryの中にif文を書いてみたがやっぱり、いきなりexceptに飛ばされた。exceptの中に書かないといけない
+
+#4/20 オンラインマッピングの形ができた。あとオーダーのQRコード化、クライアントまでの移動（手フリ）←前川くんがなんかできてそうやから聞いて導入してみる
+#キッチンでの物体把持などは、てさげかばんで、バーマンが入れてくれるからそこのステートはいらないかも
+#QRコードのやつは、qr_reader_clientをsmachの中に打ち込んで、qr_reader_serverは別ターミナルで立ち上げる
+#そして、動作内容はreco_command.pyのような感じらしい。あとしっかり動いてるかどうかの返り値はqr_reader.srvでboolとstringで判別してるらしい
+#一応、qrのサーバーとかその他諸々がうまいこと行かなかった場合、cloneしたら治るかもしれない
+# server.py系はrosrun gpsr ~~~.pyで行ける
+#大きい手提げかばん用意する
+#QRコードプリントする
+#移動系の○○へ移動しますを初回だけ発言させる。レイズハンドの認識を導入
+#おまじない
+#rosrun hector_mapping hector_mapping _map_size:=2048 _map_resolution:=0.05 _pub_map_odom_transform:=false _scan_topic:=/hsrb/base_scan _use_tf_scan_transformation:=false _map_update_angle_thresh:=2.0 _map_update_distance_thresh:=0.10 _scan_subscriber_queue_size:=1 _update_factor_free:=0.39 _update_factor_occupied:=0.85 _base_frame:=base_range_sensor_link map:=/update_map
+#rziz
+#rosrun rviz rviz  -d `rospack find hsrb_common_launch`/config/hsrb_display_full_hsrb.rviz
+#4/27仮にhuman_detectionが５回回して反応しなかったら、決め打ちの値まで移動して、クライアント側から近寄ってきてもらって、という流れにする
